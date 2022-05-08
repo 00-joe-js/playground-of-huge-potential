@@ -5,7 +5,8 @@
         "module": "ESNext",
         "lib": ["ESNext", "DOM"],
         "moduleResolution": "Node",
-        "preserveConstEnums": true
+        "preserveConstEnums": true,
+        "types": ["three"]
     },
     "include": ["src"]
 }

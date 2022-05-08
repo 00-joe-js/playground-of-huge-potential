@@ -1,3 +1,27 @@
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    padding: 0; margin: 0;
+    background: rgb(219, 219, 219);
+}
+
 #app {
-    background: red;
+    min-width: 100vw;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#three-canvas-container, #three-canvas {
+    width: 1680px;
+    height: 945px;
+    margin: 0 auto;
+}
+
+#three-canvas-container {
+    box-sizing: content-box;
+    border: 2px solid black;
 }
