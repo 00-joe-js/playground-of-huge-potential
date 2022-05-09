@@ -1,4 +1,4 @@
-import { Camera, Quaternion, Vector3, Euler } from "three";
+import { Camera, Quaternion, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene } from "three";
 
 import Keyboard from "./inputHelper";
 
@@ -23,20 +23,14 @@ canvasElement.addEventListener('pointerlockchange', () => {
     console.log("it change")
 });
 
-const UP = new Vector3(0, 1, 0);
-const LEFT = new Vector3(-1, 0, 0);
-const RIGHT = new Vector3(1, 0, 0);
-const FORWARD = new Vector3(0, 0, 1);
-const BACKWARD = new Vector3(0, 0, -1);
-
 const _euler = new Euler(0, 0, 0, 'YXZ');
 const _vector = new Vector3(0, 0, 0);
 
 const SPEED = 0.1;
-const MAX_POLAR_ANGLE = Math.PI / 8;
+const MAX_POLAR_ANGLE = MathUtils.degToRad(50);
 const MIN_POLAR_ANGLE = -MAX_POLAR_ANGLE;
 
-const setupFPSCharacter = (camera: Camera) => {
+const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
     const keyboard = new Keyboard();
     const pointer = { velX: 0.0, velY: 0.0 };
@@ -46,26 +40,43 @@ const setupFPSCharacter = (camera: Camera) => {
         pointer.velY += e.movementY;
     });
 
-    return (dt) => {
+    const moveForward = (distance: number) => {
+        _vector.setFromMatrixColumn(camera.matrix, 0);
+        _vector.crossVectors(camera.up, _vector);
+        camera.position.addScaledVector(_vector, distance);
+    };
+
+    const moveRight = (distance: number) => {
+        _vector.setFromMatrixColumn(camera.matrix, 0);
+        _vector.y = 0;
+        camera.position.addScaledVector(_vector, distance);
+    };
+
+    let headBobDelta = 0;
+
+    const material = new LineBasicMaterial({
+        color: 0xaaffff
+    });
+
+    let lines: Line[] = [];
+
+    return (dt: number) => {
+
+        const initialPosition = camera.position.clone();
 
         if (keyboard.wDown) {
-            console.log(camera.matrix);
-            console.log(_vector);
-            _vector.setFromMatrixColumn(camera.matrix, 0);
-            
-            camera.translateOnAxis(BACKWARD, SPEED);
+            moveForward(SPEED);
         }
-
         if (keyboard.sDown) {
-            camera.translateOnAxis(FORWARD, SPEED);
+            moveForward(-SPEED);
         }
 
         if (keyboard.aDown) {
-            camera.translateOnAxis(LEFT, SPEED);
+            moveRight(-SPEED);
         }
 
         if (keyboard.dDown) {
-            camera.translateOnAxis(RIGHT, SPEED);
+            moveRight(SPEED);
         }
 
         if (pointer.velX !== 0 || pointer.velY !== 0) {
@@ -81,6 +92,52 @@ const setupFPSCharacter = (camera: Camera) => {
 
             pointer.velX = 0;
             pointer.velY = 0;
+        }
+
+        const forward = new Vector3(0, 0, -1);
+        forward.applyQuaternion(camera.quaternion);
+        forward.multiplyScalar(60);
+        forward.add(camera.position);
+
+        const movedToPosition = camera.position;
+        const posDiff = initialPosition.sub(movedToPosition);
+        const vel = Math.abs(posDiff.x) + Math.abs(posDiff.z);
+
+        const getWavePoint = () => Math.abs(Math.sin(headBobDelta * 1)) * 0.2;
+        const wavePoint = getWavePoint();
+
+
+        if (vel > 0) {
+            headBobDelta += .1;
+            camera.position.y = getWavePoint();
+        } else if (wavePoint > .1) {
+            headBobDelta += .1;
+            const newWavePoint = getWavePoint();
+            if (newWavePoint > wavePoint) {
+                headBobDelta -= .2;
+            }
+            camera.position.y = getWavePoint();
+        }
+
+        camera.lookAt(forward);
+
+
+        if (dt % 1000) {
+            const points = [];
+            points.push(camera.position);
+            points.push(forward);
+            points.push(forward.clone().add(camera.up));
+
+            const geometry = new BufferGeometry().setFromPoints(points);
+            const newLine = new Line(geometry, material);
+            scene.add(newLine);
+            lines.push(newLine);
+
+            if (lines.length > 5) {
+                scene.remove(lines[0]);
+                lines = lines.slice(1);
+            }
+
         }
 
     };
