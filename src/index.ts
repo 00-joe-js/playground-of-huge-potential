@@ -9,7 +9,7 @@ window.PI = Math.PI;
 window.PI2 = Math.PI * 2;
 
 import { renderLoop } from "./renderer";
-import { Scene, PerspectiveCamera, MeshLambertMaterial, AmbientLight, DirectionalLight, MeshPhongMaterial, BoxGeometry, Color, MathUtils, ShaderMaterial } from "three";
+import { Scene, PerspectiveCamera, MeshLambertMaterial, AmbientLight, DirectionalLight, MeshPhongMaterial, BoxGeometry, Color, MathUtils, ShaderMaterial, Vector3 } from "three";
 
 import { SphereGeometry, MeshBasicMaterial, Mesh } from "three";
 
@@ -39,7 +39,7 @@ const createRandos = () => {
     for (let i = 0; i < AMOUNT; i++) {
         const sphereG = new SphereGeometry(MathUtils.randFloat(0.5, 2.0), 2, 4);
         const color = randomColor();
-        const material = new MeshLambertMaterial({ color });
+        const material = new MeshPhongMaterial({ color, specular: 0x555555 });
         const sphere = new Mesh(sphereG, material);
 
         sphere.position.y = .5;
@@ -76,7 +76,6 @@ renderLoop(scene, camera, (dt) => {
 
         loopHooks = loopHooks.concat(...createRandos());
 
-        const groundG = new BoxGeometry(1000, 0, 1000, 500, 2, 20);
         const u = { uTime: { value: 0.0 } };
         const groundMat = new ShaderMaterial({
             wireframe: true,
@@ -108,14 +107,27 @@ renderLoop(scene, camera, (dt) => {
         loopHooks.push(dt => {
             u.uTime.value = dt;
         })
+
+        const groundG = new BoxGeometry(1000, 0, 1000, 500, 2, 20);
         const ground = new Mesh(groundG, groundMat);
+
+        const rampG = new BoxGeometry(20, 20, 1, 20, 20, 3);
+        const ramp = new Mesh(rampG, groundMat);
+
+        ramp.position.z = -20;
+        ramp.position.y = 3;
+        scene.add(ramp);
+
+        ramp.layers.enable(7);
+
         ground.position.y = -2;
         scene.add(ground);
 
         const ambient = new AmbientLight(0xffffff, 0.2);
         scene.add(ambient);
 
-        const directional = new DirectionalLight(0xffffff, 0.3);
+        const directional = new DirectionalLight(0xffff00, 0.3);
+        directional.position.y = -1;
         scene.add(directional);
 
     }

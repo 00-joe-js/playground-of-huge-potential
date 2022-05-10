@@ -1,8 +1,10 @@
-import { Camera, Quaternion, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene } from "three";
+import { Camera, Quaternion, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster } from "three";
 
 import Keyboard from "./inputHelper";
 
 const canvasElement = document.querySelector("#three-canvas");
+
+const SOLID_LAYER = 7;
 
 const clamp = (min: number, max: number, v: number) => {
     if (v < min) return min;
@@ -40,10 +42,28 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         pointer.velY += e.movementY;
     });
 
+    const touchesASolid = () => {
+
+    };
+
     const moveForward = (distance: number) => {
         _vector.setFromMatrixColumn(camera.matrix, 0);
         _vector.crossVectors(camera.up, _vector);
-        camera.position.addScaledVector(_vector, distance);
+
+        const raycaster = new Raycaster(camera.position, _vector);
+        raycaster.layers.disableAll();
+        raycaster.layers.enable(SOLID_LAYER);
+
+        const objects = scene.children.filter(o => o.layers.test(raycaster.layers));
+
+        const rayResults = raycaster.intersectObjects(objects);
+
+        const collision = rayResults.some(result => result.distance < distance + 0.5);
+
+        if (!collision) {
+            camera.position.addScaledVector(_vector, distance);
+        }
+
     };
 
     const moveRight = (distance: number) => {
@@ -95,8 +115,8 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         if (pointer.velX !== 0 || pointer.velY !== 0) {
             _euler.setFromQuaternion(camera.quaternion);
 
-            _euler.y -= pointer.velX * 0.002;
-            _euler.x -= pointer.velY * 0.002;
+            _euler.y -= pointer.velX * 0.002 * 0.8;
+            _euler.x -= pointer.velY * 0.002 * 0.8;
 
             // _euler.x = Math.max(PI2 - MAX_POLAR_ANGLE, Math.min(PI2 - MIN_POLAR_ANGLE, _euler.x));
             _euler.x = clamp(MIN_POLAR_ANGLE, MAX_POLAR_ANGLE, _euler.x);
