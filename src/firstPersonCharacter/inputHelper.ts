@@ -30,8 +30,6 @@ class KeyboardInterface {
 
         const makeListener = (bool: boolean) => {
             return (e: KeyboardEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
                 const kc = e.code;
                 
                 switch (kc) {

@@ -1,4 +1,4 @@
-import { Camera, Quaternion, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster } from "three";
 
 import Keyboard from "./inputHelper";
 
@@ -16,13 +16,8 @@ if (canvasElement === null) {
     throw new Error("Document needs #three-canvas.");
 }
 
-let pointerLocked = false;
 canvasElement?.addEventListener("click", () => {
     canvasElement.requestPointerLock();
-});
-
-canvasElement.addEventListener('pointerlockchange', () => {
-    console.log("it change")
 });
 
 const _euler = new Euler(0, 0, 0, 'YXZ');
@@ -42,20 +37,15 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         pointer.velY += e.movementY;
     });
 
-    const touchesASolid = () => {
-
-    };
-
-    const moveForward = (distance: number) => {
-        _vector.setFromMatrixColumn(camera.matrix, 0);
-        _vector.crossVectors(camera.up, _vector);
+    const touchesASolid = (moveDirection: Vector3, distance: number) => {
 
         if (Math.abs(distance) !== distance) {
-            _vector.multiplyScalar(-1);
+            moveDirection = moveDirection.clone(); // To leave original vector untouched.
+            moveDirection.multiplyScalar(-1);
             distance = Math.abs(distance);
         }
 
-        const raycaster = new Raycaster(camera.position, _vector);
+        const raycaster = new Raycaster(camera.position, moveDirection);
         raycaster.layers.disableAll();
         raycaster.layers.enable(SOLID_LAYER);
 
@@ -63,20 +53,30 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         const rayResults = raycaster.intersectObjects(objects);
 
-        console.log(rayResults);
-
         const collision = rayResults.some(result => result.distance < Math.abs(distance + 0.5));
 
-        if (!collision) {
+        console.log(rayResults[0]);
+        console.log(collision);
+
+        return collision;
+
+    };
+
+    const moveForward = (distance: number) => {
+        _vector.setFromMatrixColumn(camera.matrix, 0);
+        _vector.crossVectors(camera.up, _vector);
+
+        if (!touchesASolid(_vector, distance)) {
             camera.position.addScaledVector(_vector, distance);
         }
-
     };
 
     const moveRight = (distance: number) => {
         _vector.setFromMatrixColumn(camera.matrix, 0);
         _vector.y = 0;
-        camera.position.addScaledVector(_vector, distance);
+        if (!touchesASolid(_vector, distance)) {
+            camera.position.addScaledVector(_vector, distance);
+        }
     };
 
     let headBobDelta = 0;
