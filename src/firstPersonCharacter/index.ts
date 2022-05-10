@@ -27,7 +27,7 @@ const _euler = new Euler(0, 0, 0, 'YXZ');
 const _vector = new Vector3(0, 0, 0);
 
 const SPEED = 0.1;
-const MAX_POLAR_ANGLE = MathUtils.degToRad(50);
+const MAX_POLAR_ANGLE = MathUtils.degToRad(40);
 const MIN_POLAR_ANGLE = -MAX_POLAR_ANGLE;
 
 const setupFPSCharacter = (camera: Camera, scene: Scene) => {
@@ -60,23 +60,36 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
     let lines: Line[] = [];
 
+    let sprinting = false;
+
     return (dt: number) => {
 
         const initialPosition = camera.position.clone();
 
+        if (sprinting === false && keyboard.ctrlDown === true) {
+            sprinting = true;
+        } else if (sprinting === true && keyboard.ctrlDown === false) {
+            const notMoving = [keyboard.wDown, keyboard.sDown, keyboard.aDown, keyboard.dDown].every(v => v === false);
+            if (notMoving) {
+                sprinting = false;
+            }
+        }
+
+        let speed = SPEED * (sprinting ? 3 : 1);
+
         if (keyboard.wDown) {
-            moveForward(SPEED);
+            moveForward(speed);
         }
         if (keyboard.sDown) {
-            moveForward(-SPEED);
+            moveForward(-speed);
         }
 
         if (keyboard.aDown) {
-            moveRight(-SPEED);
+            moveRight(-speed);
         }
 
         if (keyboard.dDown) {
-            moveRight(SPEED);
+            moveRight(speed);
         }
 
         if (pointer.velX !== 0 || pointer.velY !== 0) {
@@ -106,7 +119,6 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         const getWavePoint = () => Math.abs(Math.sin(headBobDelta * 1)) * 0.2;
         const wavePoint = getWavePoint();
 
-
         if (vel > 0) {
             headBobDelta += .1;
             camera.position.y = getWavePoint();
@@ -120,7 +132,6 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
 
         camera.lookAt(forward);
-
 
         if (dt % 1000) {
             const points = [];
