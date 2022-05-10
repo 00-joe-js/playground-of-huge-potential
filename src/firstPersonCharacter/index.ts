@@ -50,6 +50,11 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         _vector.setFromMatrixColumn(camera.matrix, 0);
         _vector.crossVectors(camera.up, _vector);
 
+        if (Math.abs(distance) !== distance) {
+            _vector.multiplyScalar(-1);
+            distance = Math.abs(distance);
+        }
+
         const raycaster = new Raycaster(camera.position, _vector);
         raycaster.layers.disableAll();
         raycaster.layers.enable(SOLID_LAYER);
@@ -58,7 +63,9 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         const rayResults = raycaster.intersectObjects(objects);
 
-        const collision = rayResults.some(result => result.distance < distance + 0.5);
+        console.log(rayResults);
+
+        const collision = rayResults.some(result => result.distance < Math.abs(distance + 0.5));
 
         if (!collision) {
             camera.position.addScaledVector(_vector, distance);
