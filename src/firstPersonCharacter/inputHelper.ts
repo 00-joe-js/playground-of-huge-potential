@@ -1,3 +1,7 @@
+import { Vector2 } from "three";
+
+const CAPTURE_KEY_EVENTS: boolean = false;
+
 class KeyboardInterface {
 
     wDown: boolean;
@@ -5,6 +9,7 @@ class KeyboardInterface {
     sDown: boolean;
     dDown: boolean;
     ctrlDown: boolean;
+    spaceDown: boolean;
 
     _listener: ((e: KeyboardEvent) => void) | null;
     _offListener: ((e: KeyboardEvent) => void) | null;
@@ -15,6 +20,7 @@ class KeyboardInterface {
         this.sDown = false;
         this.dDown = false;
         this.ctrlDown = false;
+        this.spaceDown = false;
 
         this._listener = null;
         this._offListener = null;
@@ -26,12 +32,16 @@ class KeyboardInterface {
 
         const th: KeyboardInterface = this;
 
-        const { W_KEY_CODE, A_KEY_CODE, S_KEY_CODE, D_KEY_CODE, CTRL_KEY_CODE } = KeyboardInterface;
+        const { W_KEY_CODE, A_KEY_CODE, S_KEY_CODE, D_KEY_CODE, CTRL_KEY_CODE, SPACE_CODE } = KeyboardInterface;
 
         const makeListener = (bool: boolean) => {
             return (e: KeyboardEvent) => {
+                if (CAPTURE_KEY_EVENTS) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
                 const kc = e.code;
-                
+
                 switch (kc) {
                     case W_KEY_CODE:
                         this.wDown = bool;
@@ -47,6 +57,9 @@ class KeyboardInterface {
                         break;
                     case CTRL_KEY_CODE:
                         this.ctrlDown = bool;
+                        break;
+                    case SPACE_CODE:
+                        this.spaceDown = bool;
                         break;
 
                 }
@@ -72,7 +85,27 @@ class KeyboardInterface {
     static S_KEY_CODE = "KeyS";
     static D_KEY_CODE = "KeyD";
     static CTRL_KEY_CODE = "ControlLeft";
+    static SPACE_CODE = "Space";
+
+}
+
+export class MouseInterface {
+
+    movement: Vector2;
+
+    constructor() {
+        this.movement = new Vector2();
+        document.addEventListener("mousemove", (e) => {
+            this.movement.x += e.movementX;
+            this.movement.y += e.movementY;
+        });
+    }
+
+    zeroMovement() {
+        this.movement = new Vector2(0, 0);
+    }
 
 }
 
 export default KeyboardInterface;
+

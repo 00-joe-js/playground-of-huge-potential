@@ -13,7 +13,7 @@ const renderer = new WebGLRenderer({
 });
 
 renderer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
-renderer.setClearColor(0xffffff);
+renderer.setClearColor(0xaaaa22a);
 
 export const renderLoop = (scene: Scene, camera: Camera, onLoop: (dt: number) => void) => {
 
