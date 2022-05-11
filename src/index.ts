@@ -91,7 +91,7 @@ const createRandos = () => {
         gameLoopFns.push((dt: number) => {
             sphere.position.y = initialY + normSin(Math.sin((offset + dt) / 500));
             sphere.position.x = ((Math.sin((dt + offset) / (offset + 1000))) * extra) + xOffset;
-            sphere.position.z += (Math.cos((dt + offset)/2000));
+            sphere.position.z += (Math.cos((dt + offset) / 2000));
             combinedUniforms.time.value = dt;
         });
     }
@@ -151,9 +151,10 @@ renderLoop(scene, camera, (dt) => {
         const ground = new Mesh(groundG, groundMat);
 
         const rampG = new BoxGeometry(1000, 30, 30, 40, 40, 3);
-        const ramp = new Mesh(rampG, groundMat);
+        const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));
 
-        ramp.position.z = -20;
+        ramp.position.z = -30;
+        ramp.position.x = 400;
         ramp.position.y = 3;
         ramp.setRotationFromEuler(new Euler(0, 0, PI / 60));
         scene.add(ramp);

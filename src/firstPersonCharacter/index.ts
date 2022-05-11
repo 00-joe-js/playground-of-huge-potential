@@ -1,4 +1,4 @@
-import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Color, Vector2, Layers } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Color, Vector2, Layers, Ray } from "three";
 
 import Keyboard, { MouseInterface } from "./inputHelper";
 
@@ -43,7 +43,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         return rayResults;
     };
 
-    const touchesASolid = (moveDirection: Vector3, distance: number) => {
+    const touchesASolid = (moveDirection: Vector3, distance: number, origin: Vector3 = camera.position) => {
 
         // Distance 
         if (Math.abs(distance) !== distance) {
@@ -52,7 +52,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             distance = Math.abs(distance);
         }
 
-        const rayResults = raycastCheckForSolidObjects(camera.position, moveDirection);
+        const rayResults = raycastCheckForSolidObjects(origin, moveDirection);
         const collision = rayResults.some(result => result.distance < Math.abs(distance + 2));
 
         return collision;
@@ -179,7 +179,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
     };
 
-    const checkIsGrounded = () => {
+    const checkIsGrounded = (origin: Vector3 = camera.position, copyResults?: any[]) => {
 
         if (aerialVector.y > 0) {
             // Moving upwards
@@ -187,9 +187,13 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             return false;
         }
 
-        const solidSurfacesBelow = raycastCheckForSolidObjects(camera.position, new Vector3(0, -1, 0));
+        const solidSurfacesBelow = raycastCheckForSolidObjects(origin, new Vector3(0, -1, 0));
 
         if (solidSurfacesBelow.length === 0) return false;
+
+        if (copyResults) {
+            copyResults.push(...solidSurfacesBelow);
+        }
 
         if (solidSurfacesBelow[0].distance <= 4) {
             return true; // You should NOT be falling.
@@ -274,10 +278,21 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             moveRight(speed, movementVector);
         }
 
-        if (!touchesASolid(movementVector, movementVector.length())) {
+        const maxSlopeableHeight = camera.position.clone();
+        maxSlopeableHeight.add(new Vector3(0, -2.0, 0));
+        if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
             camera.position.add(movementVector);
         } else {
             movementVector.multiply(ZERO_VEC3); // This is where the movement vector can be zero'd out.
+        }
+
+        const surfaces: any[] = [];
+        const groundedInNewPosition = checkIsGrounded(camera.position, surfaces);
+
+        if (groundedInNewPosition && surfaces[0].distance !== 3) {
+            const toMove = (surfaces[0].distance - 3) * -1;
+            console.log(toMove);
+            camera.position.y += toMove;
         }
 
         applyCameraRotation(mouse, _euler);
