@@ -1,4 +1,4 @@
-import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Color, Vector2, Layers, Ray } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, TIn, Object3D } from "three";
 
 import Keyboard, { MouseInterface } from "./inputHelper";
 
@@ -179,28 +179,66 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
     };
 
-    const checkIsGrounded = (origin: Vector3 = camera.position, copyResults?: any[]) => {
+    const checkIsGrounded = (origin: Vector3 = camera.position) => {
 
         if (aerialVector.y > 0) {
             // Moving upwards
             // so you're not grounded at this distance right now.
-            return false;
+            return { grounded: false, slipping: false, solidSurfacesBelow: [] };
         }
 
         const solidSurfacesBelow = raycastCheckForSolidObjects(origin, new Vector3(0, -1, 0));
 
-        if (solidSurfacesBelow.length === 0) return false;
-
-        if (copyResults) {
-            copyResults.push(...solidSurfacesBelow);
-        }
+        if (solidSurfacesBelow.length === 0) return { grounded: false, slipping: false, solidSurfacesBelow: [] };
 
         if (solidSurfacesBelow[0].distance <= 4) {
-            return true; // You should NOT be falling.
+            const slipping = onSlipperySurface(solidSurfacesBelow);
+            return { grounded: true, slipping, solidSurfacesBelow };
         } else {
-            return false;
+            return { grounded: false, slipping: false, solidSurfacesBelow };
         }
 
+    };
+
+    const onSlipperySurface = (surfaces: Intersection<Object3D<Event>>[]) => {
+        const closestSurface = surfaces[0];
+        if (!closestSurface || !closestSurface.face) throw new Error("Calling slippery with no surfaces or there are no faces.");
+        const surfaceNormal = closestSurface.face.normal.clone();
+        surfaceNormal.applyQuaternion(closestSurface.object.quaternion);
+        const dotNormal = surfaceNormal.dot(camera.up);
+
+        if (dotNormal > 0.9) {
+            return false;
+        } else {
+            return true;
+        }
+    };
+
+    // My math goal right now is to not do this by looping and guessing. 
+    // There MUST be a better, more determined way.
+    const getSlippingVectorFromSurfaceNormal = (surfaceNormal: Vector3) => {
+        let testVectors = [new Vector3(1, 0, 0), new Vector3(0, 0, 1), new Vector3(-1, 0, 0), new Vector3(0, 0, -1), new Vector3(0, 1, 0), new Vector3(0, -1, 0)];
+        let slideVector = new Vector3(0, 0, 0);
+        let yResults = [];
+        let i = 0;
+
+        do {
+            const testVector = testVectors[i];
+            i++;
+            slideVector.crossVectors(surfaceNormal, testVector);
+            yResults.push(slideVector.y);
+        } while (i < testVectors.length)
+
+        const indexOfBestResult = yResults.reduce((bestResult, result, i) => {
+            if (result < bestResult.val) return { index: i, val: result };
+            return bestResult;
+        }, { index: -1, val: Infinity }).index;
+
+        slideVector.crossVectors(surfaceNormal, testVectors[indexOfBestResult]);
+        console.log(yResults);
+        console.log(testVectors);
+        console.log(slideVector);
+        return slideVector;
     };
 
     let thisFallTotalTime = 0;
@@ -237,7 +275,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
     };
 
-    const applyJumpAndGravity = (isGrounded: boolean, deltaTimeSinceSceneStart: number) => {
+    const applyJumpAndGravity = (isGrounded: boolean, isSlipping: boolean, deltaTimeSinceSceneStart: number) => {
         if (isGrounded) {
 
             lastFallingFrameTime = 0;
@@ -245,11 +283,14 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
                 aerialVector.set(0, 0, 0);
             }
 
-            let spaceDown = getSpacePress();
-            if (spaceDown) {
-                aerialVector.add(new Vector3(0, 0.4 * (sprinting ? 2 : 1), 0));
-                fall(deltaTimeSinceSceneStart);
+            if (!isSlipping) {
+                let spaceDown = getSpacePress();
+                if (spaceDown) {
+                    aerialVector.add(new Vector3(0, 0.4 * (sprinting ? 2 : 1), 0));
+                    fall(deltaTimeSinceSceneStart);
+                }
             }
+
         } else {
             fall(deltaTimeSinceSceneStart);
         }
@@ -259,8 +300,9 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         const movementVector = new Vector3(0, 0, 0);
 
-        const isGrounded = checkIsGrounded();
-        applyJumpAndGravity(isGrounded, dt);
+        const initialGroundedCheck = checkIsGrounded();
+        const isGrounded = initialGroundedCheck.grounded;
+        applyJumpAndGravity(isGrounded, initialGroundedCheck.slipping, dt);
         assignSprinting(isGrounded);
 
         let speed = SPEED * (sprinting ? 3 : 1);
@@ -279,20 +321,32 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
 
         const maxSlopeableHeight = camera.position.clone();
-        maxSlopeableHeight.add(new Vector3(0, -2.0, 0));
+        maxSlopeableHeight.add(new Vector3(0, -1.0, 0));
         if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
             camera.position.add(movementVector);
         } else {
             movementVector.multiply(ZERO_VEC3); // This is where the movement vector can be zero'd out.
         }
 
-        const surfaces: any[] = [];
-        const groundedInNewPosition = checkIsGrounded(camera.position, surfaces);
+        const groundedInNewPosition = checkIsGrounded(camera.position);
 
-        if (groundedInNewPosition && surfaces[0].distance !== 3) {
-            const toMove = (surfaces[0].distance - 3) * -1;
-            console.log(toMove);
-            camera.position.y += toMove;
+        if (groundedInNewPosition.grounded === true) {
+            const toMove = (groundedInNewPosition.solidSurfacesBelow[0].distance - 3) * -1;
+            camera.position.y += toMove; // Snapping player to a good grounded height on this non-slippery surface.
+            if (groundedInNewPosition.slipping === true) {
+                // Slippery.
+                const closestSurface = groundedInNewPosition.solidSurfacesBelow[0];
+                const face = closestSurface.face;
+                if (!face) {
+                    console.log(groundedInNewPosition);
+                    const err = new Error("No face. Why?");
+                    throw err;
+                }
+                const surfaceNormal = face.normal.clone();
+                surfaceNormal.applyQuaternion(closestSurface.object.quaternion);
+                const slideVector = getSlippingVectorFromSurfaceNormal(surfaceNormal);
+                camera.position.add(slideVector.multiplyScalar(2));
+            }
         }
 
         applyCameraRotation(mouse, _euler);

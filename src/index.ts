@@ -40,7 +40,7 @@ const randomColor = () => {
 };
 
 const createRandos = () => {
-    const AMOUNT = 300;
+    const AMOUNT = 20;
     const DISTANCE = 1.0;
 
     const gameLoopFns = [];
@@ -154,9 +154,9 @@ renderLoop(scene, camera, (dt) => {
         const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));
 
         ramp.position.z = -30;
-        ramp.position.x = 400;
+        ramp.position.x = 100;
         ramp.position.y = 3;
-        ramp.setRotationFromEuler(new Euler(0, 0, PI / 60));
+        ramp.setRotationFromEuler(new Euler(0, 0, Math.PI / 6));
         scene.add(ramp);
 
         ground.name = "ground";
