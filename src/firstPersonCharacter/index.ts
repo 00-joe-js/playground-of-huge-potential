@@ -21,9 +21,12 @@ canvasElement?.addEventListener("click", () => {
     canvasElement.requestPointerLock();
 });
 
+let collisionChain = false;
+
 const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
-    camera.position.y = 20;
+    camera.position.y = 30;
+    // camera.position.z = 500;
 
     const getSceneSolidObjects = (() => {
         const testLayers = new Layers();
@@ -45,15 +48,31 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
     const touchesASolid = (moveDirection: Vector3, distance: number, origin: Vector3 = camera.position) => {
 
+        const dir = moveDirection.clone();
+        dir.normalize();
+
         // Distance 
         if (Math.abs(distance) !== distance) {
-            moveDirection = moveDirection.clone(); // To leave original vector untouched.
-            moveDirection.multiplyScalar(-1);
+            dir.multiplyScalar(-1);
             distance = Math.abs(distance);
         }
 
         const rayResults = raycastCheckForSolidObjects(origin, moveDirection);
-        const collision = rayResults.some(result => result.distance < Math.abs(distance + 2));
+
+        const collision = rayResults.some(result => result.distance < Math.abs(distance + 3));
+
+        if (collision && collisionChain === false) {
+            console.log("collide");
+            collisionChain = true;
+        } else if (!collision && collisionChain) {
+            collisionChain = false;
+            console.warn("No collision");
+            console.groupCollapsed("Details");
+            console.log("Ray results:", rayResults);
+            console.log("Move", moveDirection);
+            console.log("Normal", dir);
+            console.groupEnd();
+        }
 
         return collision;
 
@@ -106,7 +125,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
     };
 
     const checkCancelSprinting = (frameMovement: Vector3) => {
-        if (frameMovement.equals(ZERO_VEC3)) {
+        if (frameMovement.multiply(new Vector3(1, 0, 1)).equals(ZERO_VEC3)) {
             sprinting = false;
         }
     };
@@ -135,7 +154,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
     const applyHeadBob = (movementVector: Vector3) => {
         const aheadOfCameraBeforeReposition = getPointAheadOfCamera();
-        const vel = movementVector.length();
+        const vel = movementVector.clone().multiply(new Vector3(1, 0, 1)).length();
 
         const getWavePoint = () => Math.abs(Math.sin(headBobDelta * 1)) * 0.2;
         const currentWavePoint = getWavePoint();
@@ -191,7 +210,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         if (solidSurfacesBelow.length === 0) return { grounded: false, slipping: false, solidSurfacesBelow: [] };
 
-        if (solidSurfacesBelow[0].distance <= 4) {
+        if (solidSurfacesBelow[0].distance <= 5) {
             const slipping = onSlipperySurface(solidSurfacesBelow);
             return { grounded: true, slipping, solidSurfacesBelow };
         } else {
@@ -320,38 +339,57 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             moveRight(speed, movementVector);
         }
 
-        const maxSlopeableHeight = camera.position.clone();
-        maxSlopeableHeight.add(new Vector3(0, -1.0, 0));
-        if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
-            camera.position.add(movementVector);
-        } else {
-            movementVector.multiply(ZERO_VEC3); // This is where the movement vector can be zero'd out.
-        }
+        if (!movementVector.equals(ZERO_VEC3)) {
 
-        const groundedInNewPosition = checkIsGrounded(camera.position);
+            const groundedInNewPosition = checkIsGrounded(camera.position.clone().add(movementVector));
 
-        if (groundedInNewPosition.grounded === true) {
-            const toMove = (groundedInNewPosition.solidSurfacesBelow[0].distance - 3) * -1;
-            camera.position.y += toMove; // Snapping player to a good grounded height on this non-slippery surface.
-            if (groundedInNewPosition.slipping === true) {
-                // Slippery.
-                const closestSurface = groundedInNewPosition.solidSurfacesBelow[0];
-                const face = closestSurface.face;
-                if (!face) {
-                    console.log(groundedInNewPosition);
-                    const err = new Error("No face. Why?");
-                    throw err;
+            if (groundedInNewPosition.grounded === true) {
+
+                if (initialGroundedCheck.grounded === true) {
+                    const oldDistaceFromFloor = initialGroundedCheck.solidSurfacesBelow[0].distance;
+                    const newDistanceFromFloor = groundedInNewPosition.solidSurfacesBelow[0].distance;
+
+                    const differenceInDistanceFromFloor = oldDistaceFromFloor - newDistanceFromFloor;
+
+                    console.log(differenceInDistanceFromFloor);
+
+                    movementVector.y = differenceInDistanceFromFloor;
                 }
-                const surfaceNormal = face.normal.clone();
-                surfaceNormal.applyQuaternion(closestSurface.object.quaternion);
-                const slideVector = getSlippingVectorFromSurfaceNormal(surfaceNormal);
-                camera.position.add(slideVector.multiplyScalar(2));
+
+
+                if (groundedInNewPosition.slipping === true) {
+                    // Slippery.
+                    const closestSurface = groundedInNewPosition.solidSurfacesBelow[0];
+                    const face = closestSurface.face;
+                    if (!face) {
+                        console.log(groundedInNewPosition);
+                        const err = new Error("No face. Why?");
+                        throw err;
+                    }
+                    const surfaceNormal = face.normal.clone();
+                    surfaceNormal.applyQuaternion(closestSurface.object.quaternion);
+                    const slideVector = getSlippingVectorFromSurfaceNormal(surfaceNormal);
+                    camera.position.add(slideVector.multiplyScalar(3));
+                }
+            }
+
+            // if (!movementVector.equals(ZERO_VEC3)) {
+            //     console.log(movementVector.clone());
+            // }
+
+            const maxSlopeableHeight = camera.position.clone();
+            maxSlopeableHeight.add(new Vector3(0, -0.5, 0));
+            if (!touchesASolid(movementVector, movementVector.length() * 2, maxSlopeableHeight)) {
+                camera.position.add(movementVector);
+            } else {
+                console.log("yes collision");
+                movementVector.multiply(ZERO_VEC3); // This is where the movement vector can be zero'd out.
             }
         }
 
         applyCameraRotation(mouse, _euler);
 
-        applyHeadBob(movementVector);
+        // applyHeadBob(movementVector);
 
         checkCancelSprinting(movementVector);
         drawCrosshair(dt);

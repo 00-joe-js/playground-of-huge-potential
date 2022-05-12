@@ -84,7 +84,7 @@ class KeyboardInterface {
     static A_KEY_CODE = "KeyA";
     static S_KEY_CODE = "KeyS";
     static D_KEY_CODE = "KeyD";
-    static CTRL_KEY_CODE = "ControlLeft";
+    static CTRL_KEY_CODE = "ShiftLeft";
     static SPACE_CODE = "Space";
 
 }

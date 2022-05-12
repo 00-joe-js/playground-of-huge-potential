@@ -1,9 +1,11 @@
 import "./style.css";
 
-import { Scene, PerspectiveCamera, MeshLambertMaterial, AmbientLight, DirectionalLight, MeshPhongMaterial, BoxGeometry, Color, MathUtils, ShaderMaterial, Vector3, Euler } from "three";
+import { Scene, PerspectiveCamera, MeshLambertMaterial, AmbientLight, DirectionalLight, MeshPhongMaterial, BoxGeometry, Color, MathUtils, ShaderMaterial, Vector3, Euler, Group } from "three";
 import { SphereGeometry, MeshBasicMaterial, Mesh, UniformsUtils, ShaderLib, BufferAttribute, SphereBufferGeometry } from "three";
 
-import customPhongVertex from "./shading/customPhongVertex"
+import customPhongVertex from "./shading/customPhongVertex";
+
+import loadModels from "./importHelpers/gltfLoader";
 
 /* GLOBALS */
 declare global {
@@ -27,7 +29,7 @@ import setupFPSCharacter from "./firstPersonCharacter";
 const RESOLUTION = 16 / 9;
 
 const scene = new Scene();
-const camera = new PerspectiveCamera(50, RESOLUTION, 1, 1000);
+const camera = new PerspectiveCamera(50, RESOLUTION, 1, 10000);
 camera.position.z = 20;
 
 const includeInGameLoop = setupFPSCharacter(camera, scene);
@@ -106,82 +108,104 @@ let sceneMade = false;
 let loopHooks = [includeInGameLoop];
 
 
+const configureTower = (towerGroup: Group) => {
+    const scale = 400;
+    towerGroup.scale.set(scale, scale * 1.2, scale);
+    towerGroup.position.z = -500;
+    towerGroup.position.y = -14;
+    towerGroup.layers.enable(7);
+    towerGroup.children.forEach(m => {
+        m.layers.enable(7);
+    });
+};
 
-renderLoop(scene, camera, (dt) => {
+(async () => {
 
-    if (sceneMade === false) {
-        sceneMade = true;
+    const models = await loadModels();
 
-        loopHooks = loopHooks.concat(...createRandos());
+    renderLoop(scene, camera, (dt) => {
 
-        const u = { uTime: { value: 0.0 } };
-        const groundMat = new ShaderMaterial({
-            wireframe: true,
-            uniforms: u,
-            vertexShader: `
-            uniform float uTime;
-            uniform float uSeed;
-            float rand(float n){return fract(sin(n) * 43758.5453123);}
-            float noise(float p){
-                float fl = floor(p);
-                float fc = fract(p);
-                return mix(rand(fl), rand(fl + 1.0), fc);
-            }
-            varying vec3 vPos;
-            void main() {
-                vec3 pos = position + vec3(0.0, noise(position.x + position.z / 100.0 + (uTime/150.0)) * -10.0, 0.0);
-                vPos = pos;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 );
-            }
-            `,
-            fragmentShader: `
-            varying vec3 vPos;
-            void main() {
-                vec3 color = vec3(0.0 - (vPos.y / 4.0), 0.0 - (vPos.y / 5.0), 0.0);
-                gl_FragColor = vec4(color, 1.0);
-            }
-            `
-        });
+        if (sceneMade === false) {
+            sceneMade = true;
 
-        loopHooks.push(dt => {
-            u.uTime.value = dt;
-        })
+            loopHooks = loopHooks.concat(...createRandos());
 
-        const groundG = new BoxGeometry(1000, 0, 1000, 500, 2, 20);
-        const ground = new Mesh(groundG, groundMat);
+            const tower = models[0].scene;
+            configureTower(tower);
+            scene.add(tower);
 
-        const rampG = new BoxGeometry(1000, 30, 30, 40, 40, 3);
-        const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));
+            const u = { uTime: { value: 0.0 } };
+            const groundMat = new ShaderMaterial({
+                wireframe: true,
+                uniforms: u,
+                vertexShader: `
+                uniform float uTime;
+                uniform float uSeed;
+                float rand(float n){return fract(sin(n) * 43758.5453123);}
+                float noise(float p){
+                    float fl = floor(p);
+                    float fc = fract(p);
+                    return mix(rand(fl), rand(fl + 1.0), fc);
+                }
+                varying vec3 vPos;
+                void main() {
+                    vec3 pos = position + vec3(0.0, noise(position.x + position.z / 2.0 + (uTime/3550.0)) * -20.0, 0.0);
+                    vPos = pos;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 );
+                }
+                `,
+                fragmentShader: `
+                varying vec3 vPos;
+                void main() {
+                    vec3 color = vec3(0.0 - (vPos.y / 4.0), 0.0 - (vPos.y / 5.0), 0.0);
+                    gl_FragColor = vec4(color, 1.0);
+                }
+                `
+            });
 
-        ramp.position.z = -30;
-        ramp.position.x = 100;
-        ramp.position.y = 3;
-        ramp.setRotationFromEuler(new Euler(0, 0, Math.PI / 6));
-        scene.add(ramp);
+            loopHooks.push(dt => {
+                u.uTime.value = dt;
+            })
 
-        ground.name = "ground";
-        ground.layers.enable(7);
-        ramp.layers.enable(7);
+            const groundG = new BoxGeometry(3000, 0, 3000, 20, 1, 300);
+            const ground = new Mesh(groundG, groundMat);
 
-        ground.position.y = -2;
-        scene.add(ground);
+            const rampG = new BoxGeometry(1000, 30, 30, 40, 40, 3);
+            const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));
 
-        const ambient = new AmbientLight(0xffffff, 0.2);
-        scene.add(ambient);
+            ramp.position.z = -30;
+            ramp.position.x = 100;
+            ramp.position.y = 3;
+            ramp.setRotationFromEuler(new Euler(0, 0, Math.PI / 7));
+            scene.add(ramp);
 
-        const directional = new DirectionalLight(0xffff00, 0.1);
-        directional.position.y = -1;
-        scene.add(directional);
+            ground.name = "ground";
+            ground.layers.enable(7);
+            ramp.layers.enable(7);
 
-        loopHooks.push(dt => {
-            const theta = dt / 100;
-            directional.position.y = -1 + ((Math.sin(theta) + 1) / 2) * 2;
-            directional.position.x = Math.cos(theta * 0.7);
-            directional.position.z = Math.sin(theta * 2);
-        });
+            ground.position.y = -2;
+            scene.add(ground);
 
-    }
+            const ambient = new AmbientLight(0xffffff, 0.2);
+            scene.add(ambient);
 
-    loopHooks.forEach(fn => fn(dt));
+            const directional = new DirectionalLight(0xffff00, 0.1);
+            directional.position.y = -1;
+            scene.add(directional);
 
-});
+            loopHooks.push(dt => {
+                const theta = dt / 300;
+                directional.position.y = -1 + ((Math.sin(theta) + 1) / 2) * 2;
+                directional.position.x = Math.cos(theta * 0.7);
+                directional.position.z = Math.sin(theta * 2);
+            });
+
+        }
+
+        loopHooks.forEach(fn => fn(dt));
+
+    });
+
+})();
+
+
