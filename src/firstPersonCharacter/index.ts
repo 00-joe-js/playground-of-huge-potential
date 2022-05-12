@@ -57,12 +57,11 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             distance = Math.abs(distance);
         }
 
-        const rayResults = raycastCheckForSolidObjects(origin, moveDirection);
+        const rayResults = raycastCheckForSolidObjects(origin, dir);
 
         const collision = rayResults.some(result => result.distance < Math.abs(distance + 3));
 
         if (collision && collisionChain === false) {
-            console.log("collide");
             collisionChain = true;
         } else if (!collision && collisionChain) {
             collisionChain = false;
@@ -348,11 +347,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
                 if (initialGroundedCheck.grounded === true) {
                     const oldDistaceFromFloor = initialGroundedCheck.solidSurfacesBelow[0].distance;
                     const newDistanceFromFloor = groundedInNewPosition.solidSurfacesBelow[0].distance;
-
                     const differenceInDistanceFromFloor = oldDistaceFromFloor - newDistanceFromFloor;
-
-                    console.log(differenceInDistanceFromFloor);
-
                     movementVector.y = differenceInDistanceFromFloor;
                 }
 
@@ -373,13 +368,9 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
                 }
             }
 
-            // if (!movementVector.equals(ZERO_VEC3)) {
-            //     console.log(movementVector.clone());
-            // }
-
             const maxSlopeableHeight = camera.position.clone();
             maxSlopeableHeight.add(new Vector3(0, -0.5, 0));
-            if (!touchesASolid(movementVector, movementVector.length() * 2, maxSlopeableHeight)) {
+            if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
                 camera.position.add(movementVector);
             } else {
                 console.log("yes collision");
