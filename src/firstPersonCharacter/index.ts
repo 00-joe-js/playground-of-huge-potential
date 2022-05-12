@@ -1,4 +1,4 @@
-import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, TIn, Object3D } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D } from "three";
 
 import Keyboard, { MouseInterface } from "./inputHelper";
 
