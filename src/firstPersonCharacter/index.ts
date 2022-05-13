@@ -89,17 +89,17 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
     let headBobDelta = 0;
 
     // To be called in loop:
-    const assignSprinting = (isGrounded: boolean) => {
+    const assignSprinting = (isGrounded: boolean, sprintButtonDown: boolean) => {
         if (sprinting === true) return sprinting;
 
-        if (keyboard.ctrlDown === true) {
+        if (sprintButtonDown === true) {
             if (CAN_SPRINT_IN_AIR || isGrounded) {
                 sprinting = true;
                 return sprinting;
             }
         }
 
-        if (sprinting === false && keyboard.ctrlDown === true) { // Toggle sprint on with ctrl.
+        if (sprinting === false && sprintButtonDown === true) { // Toggle sprint on with ctrl.
             sprinting = true;
         }
     };
@@ -274,11 +274,11 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
     };
 
     let spacePressed = false;
-    const getSpacePress = () => {
-        if (spacePressed === false && keyboard.spaceDown) {
+    const getSpacePress = (jumpButtonDown: boolean) => {
+        if (spacePressed === false && jumpButtonDown) {
             spacePressed = true;
             return true;
-        } else if (spacePressed === true && !keyboard.spaceDown) {
+        } else if (spacePressed === true && !jumpButtonDown) {
             spacePressed = false;
             return false;
         } else {
@@ -286,7 +286,7 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
         }
     };
 
-    const applyJumpAndGravity = (isGrounded: boolean, isSlipping: boolean, deltaTimeSinceSceneStart: number) => {
+    const applyJumpAndGravity = (isGrounded: boolean, isSlipping: boolean, deltaTimeSinceSceneStart: number, jumpButtonDown: boolean) => {
         if (isGrounded) {
 
             lastFallingFrameTime = 0;
@@ -295,7 +295,7 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
             }
 
             if (!isSlipping) {
-                let spaceDown = getSpacePress();
+                let spaceDown = getSpacePress(jumpButtonDown);
                 if (spaceDown) {
                     aerialVector.add(new Vector3(0, 0.4 * (sprinting ? 2 : 1), 0));
                     fall(deltaTimeSinceSceneStart);
@@ -317,26 +317,36 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
 
     return (dt: number) => {
 
+        const gamepadState = gamepad.getState();
         const movementVector = new Vector3(0, 0, 0);
 
         const initialGroundedCheck = checkIsGrounded();
         const isGrounded = initialGroundedCheck.grounded;
-        applyJumpAndGravity(isGrounded, initialGroundedCheck.slipping, dt);
-        assignSprinting(isGrounded);
+        applyJumpAndGravity(isGrounded, initialGroundedCheck.slipping, dt, gamepadState ? gamepadState.xDown : keyboard.spaceDown);
+        assignSprinting(isGrounded, gamepadState ? gamepadState.zRDown : keyboard.ctrlDown);
 
         let speed = SPEED * (sprinting ? 3 : 1);
 
-        if (keyboard.wDown) {
-            moveForward(speed, movementVector);
-        }
-        if (keyboard.sDown) {
-            moveForward(-speed, movementVector);
-        }
-        if (keyboard.aDown) {
-            moveRight(-speed, movementVector);
-        }
-        if (keyboard.dDown) {
-            moveRight(speed, movementVector);
+        if (gamepadState) {
+            if (gamepadState.moveVel.y !== 0) {
+                moveForward(speed * gamepadState.moveVel.y, movementVector);
+            }
+            if (gamepadState.moveVel.x !== 0) {
+                moveRight(speed * gamepadState.moveVel.x, movementVector);
+            }
+        } else {
+            if (keyboard.wDown) {
+                moveForward(speed, movementVector);
+            }
+            if (keyboard.sDown) {
+                moveForward(-speed, movementVector);
+            }
+            if (keyboard.aDown) {
+                moveRight(-speed, movementVector);
+            }
+            if (keyboard.dDown) {
+                moveRight(speed, movementVector);
+            }
         }
 
         if (!movementVector.equals(ZERO_VEC3)) {
@@ -375,13 +385,10 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
             camera.position.add(slideVector.multiplyScalar(3));
         }
 
-        const gamepadState = gamepad.getState();
         if (gamepadState) {
-            console.log(gamepadState.lookVel);
             applyCameraRotation({ xVelocity: gamepadState.lookVel.x, yVelocity: gamepadState.lookVel.y }, _euler);
 
         } else {
-            console.log(mouse.movement);
             applyCameraRotation({ xVelocity: mouse.movement.x, yVelocity: mouse.movement.y }, _euler);
         }
 

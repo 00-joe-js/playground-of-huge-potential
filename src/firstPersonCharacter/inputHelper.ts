@@ -143,9 +143,17 @@ export class GamepadInterface {
 
         if (!gamepad) return null;
 
-        const lookScale = 50;
+        const buttonValues = gamepad.buttons.map(b => b.value);
+
+        const xDown = buttonValues[3] === 1;
+        const zRDown = buttonValues[7] === 1;
+
+        const moveScale = 1;
+        const moveVel = new Vector2(gamepad.axes[0] * moveScale, gamepad.axes[1] * moveScale * -1);
+
+        const lookScale = 40;
         const lookVel = new Vector2(gamepad.axes[2] * lookScale, gamepad.axes[3] * lookScale);
-        return { lookVel };
+        return { lookVel, moveVel, xDown, zRDown };
     }
 
     private listenForGamepadConnect() {
