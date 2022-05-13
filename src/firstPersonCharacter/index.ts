@@ -1,6 +1,6 @@
 import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D, Matrix3 } from "three";
 
-import Keyboard, { MouseInterface } from "./inputHelper";
+import Keyboard, { MouseInterface, GamepadInterface } from "./inputHelper";
 
 const canvasElement = document.querySelector("#three-canvas");
 
@@ -23,7 +23,11 @@ canvasElement?.addEventListener("click", () => {
     canvasElement.requestPointerLock();
 });
 
-const setupFPSCharacter = (camera: Camera, scene: Scene) => {
+const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
+
+    const gamepad = new GamepadInterface();
+
+    await gamepad.waitForGamepadConnect();
 
     const keyboard = new Keyboard();
     const mouse = new MouseInterface();
@@ -106,13 +110,13 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
     };
 
-    const applyCameraRotation = (mouse: MouseInterface, copyToEuler: Euler) => {
-        if (mouse.movement.x !== 0 || mouse.movement.y !== 0) {
+    const applyCameraRotation = ({ xVelocity, yVelocity }: { xVelocity: number, yVelocity: number }, copyToEuler: Euler) => {
+        if (xVelocity !== 0 || yVelocity !== 0) {
 
             copyToEuler.setFromQuaternion(camera.quaternion);
 
-            copyToEuler.y -= mouse.movement.x * 0.002 * 0.8;
-            copyToEuler.x -= mouse.movement.y * 0.002 * 0.8;
+            copyToEuler.y -= xVelocity * 0.002 * 0.8;
+            copyToEuler.x -= yVelocity * 0.002 * 0.8;
             copyToEuler.x = MathUtils.clamp(copyToEuler.x, MIN_POLAR_ANGLE, MAX_POLAR_ANGLE);
             camera.quaternion.setFromEuler(copyToEuler);
 
@@ -371,7 +375,15 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             camera.position.add(slideVector.multiplyScalar(3));
         }
 
-        applyCameraRotation(mouse, _euler);
+        const gamepadState = gamepad.getState();
+        if (gamepadState) {
+            console.log(gamepadState.lookVel);
+            applyCameraRotation({ xVelocity: gamepadState.lookVel.x, yVelocity: gamepadState.lookVel.y }, _euler);
+
+        } else {
+            console.log(mouse.movement);
+            applyCameraRotation({ xVelocity: mouse.movement.x, yVelocity: mouse.movement.y }, _euler);
+        }
 
         applyHeadBob(movementVector);
 

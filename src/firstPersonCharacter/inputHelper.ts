@@ -107,5 +107,55 @@ export class MouseInterface {
 
 }
 
+export class GamepadInterface {
+
+    gamepad: Gamepad | null;
+    gamepadAvailable: boolean;
+
+    constructor() {
+        this.gamepad = null;
+        this.gamepadAvailable = false;
+        this.listenForGamepadConnect();
+    }
+
+    waitForGamepadConnect(timeout = 5000) {
+
+        return new Promise((resolve, reject) => {
+            if (this.gamepad) {
+                return resolve(this.gamepad);
+            }
+            const polling = setInterval(() => {
+                if (this.gamepad) {
+                    resolve(this.gamepad);
+                }
+            }, 100);
+            setTimeout(() => {
+                clearInterval(polling);
+                resolve(null);
+            }, timeout);
+        });
+
+    }
+
+    getState() {
+        const gamepad = navigator.getGamepads()[0];
+
+
+        if (!gamepad) return null;
+
+        const lookScale = 50;
+        const lookVel = new Vector2(gamepad.axes[2] * lookScale, gamepad.axes[3] * lookScale);
+        return { lookVel };
+    }
+
+    private listenForGamepadConnect() {
+        window.addEventListener("gamepadconnected", (e) => {
+            this.gamepad = navigator.getGamepads()[0];
+        });
+    }
+
+}
+
+
 export default KeyboardInterface;
 

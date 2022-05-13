@@ -32,7 +32,6 @@ const scene = new Scene();
 const camera = new PerspectiveCamera(50, RESOLUTION, 1, 10000);
 camera.position.z = 20;
 
-const includeInGameLoop = setupFPSCharacter(camera, scene);
 
 // randos.
 const randomColor = () => {
@@ -105,7 +104,7 @@ const createRandos = () => {
 
 let sceneMade = false;
 
-let loopHooks = [includeInGameLoop];
+let loopHooks: Array<(dt: number) => void> = [];
 
 const configureTower = (towerGroup: Group) => {
     const scale = 400;
@@ -129,7 +128,7 @@ const configureTower = (towerGroup: Group) => {
 (async () => {
 
     const models = await loadModels();
-
+    loopHooks.push(await setupFPSCharacter(camera, scene));
 
     renderLoop(scene, camera, (dt) => {
 
