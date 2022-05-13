@@ -48,7 +48,7 @@ const createRandos = () => {
     const gameLoopFns = [];
 
     for (let i = 0; i < AMOUNT; i++) {
-        const sphereG = new SphereBufferGeometry(MathUtils.randFloat(0.5, 2.5), MathUtils.randInt(7, 15), MathUtils.randInt(10, 20));
+        const sphereG = new SphereBufferGeometry(MathUtils.randFloat(5.0,8.5), MathUtils.randInt(7, 15), MathUtils.randInt(10, 20));
 
         let offsets = new Float32Array();
         for (let i = 0; i < sphereG.attributes.position.count; i++) {
@@ -107,14 +107,21 @@ let sceneMade = false;
 
 let loopHooks = [includeInGameLoop];
 
-
 const configureTower = (towerGroup: Group) => {
     const scale = 400;
     towerGroup.scale.set(scale, scale * 1.2, scale);
     towerGroup.position.z = -500;
-    towerGroup.position.y = -14;
+    towerGroup.position.y = -10;
     towerGroup.layers.enable(7);
     towerGroup.children.forEach(m => {
+        if (!(m instanceof Mesh)) {
+            throw new Error("Not a mesh.");
+        }
+        if (m.name === "Obelisk") {
+            m.material = new MeshPhongMaterial({ color: 0x000000, specular: 0xffffff });
+        } else {
+            m.material = new MeshPhongMaterial({ color: 0xffff00, specular: 0xffffff });
+        }
         m.layers.enable(7);
     });
 };
@@ -122,6 +129,7 @@ const configureTower = (towerGroup: Group) => {
 (async () => {
 
     const models = await loadModels();
+
 
     renderLoop(scene, camera, (dt) => {
 
@@ -133,6 +141,14 @@ const configureTower = (towerGroup: Group) => {
             const tower = models[0].scene;
             configureTower(tower);
             scene.add(tower);
+
+            const ramps = models[1].scene;
+            ramps.scale.set(400, 400, 400);
+            ramps.position.z = -500;
+            ramps.position.y = 0;
+            ramps.layers.enable(7);
+            ramps.children.forEach(m => m.layers.enable(7));
+            scene.add(ramps);
 
             const u = { uTime: { value: 0.0 } };
             const groundMat = new ShaderMaterial({
@@ -167,22 +183,20 @@ const configureTower = (towerGroup: Group) => {
                 u.uTime.value = dt;
             })
 
-            const groundG = new BoxGeometry(3000, 0, 3000, 20, 1, 300);
+            const groundG = new BoxGeometry(7000, 0, 7000, 20, 1, 300);
             const ground = new Mesh(groundG, groundMat);
-
             const rampG = new BoxGeometry(1000, 30, 30, 40, 40, 3);
             const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));
 
             ramp.position.z = -30;
             ramp.position.x = 100;
             ramp.position.y = 3;
-            ramp.setRotationFromEuler(new Euler(0, 0, Math.PI / 7));
+            ramp.setRotationFromEuler(new Euler(0, 0, Math.PI / 6));
             scene.add(ramp);
-
+            
             ground.name = "ground";
             ground.layers.enable(7);
             ramp.layers.enable(7);
-
             ground.position.y = -2;
             scene.add(ground);
 

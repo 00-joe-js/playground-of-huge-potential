@@ -1,10 +1,10 @@
-import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D, Matrix3 } from "three";
 
 import Keyboard, { MouseInterface } from "./inputHelper";
 
 const canvasElement = document.querySelector("#three-canvas");
 
-const SPEED = 0.4;
+const SPEED = 0.7;
 const MAX_POLAR_ANGLE = MathUtils.degToRad(40);
 const MIN_POLAR_ANGLE = -MAX_POLAR_ANGLE;
 const SOLID_LAYER = 7;
@@ -25,8 +25,8 @@ let collisionChain = false;
 
 const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
-    camera.position.y = 30;
-    // camera.position.z = 500;
+    const startPos = { x: 0, z: 300, y: 1000 };
+    camera.position.set(startPos.x, startPos.y, startPos.z);
 
     const getSceneSolidObjects = (() => {
         const testLayers = new Layers();
@@ -209,7 +209,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         if (solidSurfacesBelow.length === 0) return { grounded: false, slipping: false, solidSurfacesBelow: [] };
 
-        if (solidSurfacesBelow[0].distance <= 5) {
+        if (solidSurfacesBelow[0].distance <= 15) {
             const slipping = onSlipperySurface(solidSurfacesBelow);
             return { grounded: true, slipping, solidSurfacesBelow };
         } else {
@@ -218,14 +218,25 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
     };
 
+    const _normalMatrix = new Matrix3();
+    const _worldNormal = new Vector3();
+    const convertLocalNormalToWorld = (objectContainingNormal: Object3D, localNormal: Vector3, ) => {
+        _normalMatrix.getNormalMatrix(objectContainingNormal.matrixWorld);
+        _worldNormal.copy(localNormal).applyMatrix3(_normalMatrix).normalize();
+        return _worldNormal.clone();
+    };
+
     const onSlipperySurface = (surfaces: Intersection<Object3D<Event>>[]) => {
         const closestSurface = surfaces[0];
         if (!closestSurface || !closestSurface.face) throw new Error("Calling slippery with no surfaces or there are no faces.");
-        const surfaceNormal = closestSurface.face.normal.clone();
-        surfaceNormal.applyQuaternion(closestSurface.object.quaternion);
-        const dotNormal = surfaceNormal.dot(camera.up);
 
-        if (dotNormal > 0.9) {
+        const surfaceNormal = closestSurface.face.normal.clone();
+
+        const surfaceWorldNormal = convertLocalNormalToWorld(closestSurface.object, surfaceNormal);
+            
+        const dotNormal = surfaceWorldNormal.dot(camera.up);
+
+        if (Math.abs(dotNormal) > .9) {
             return false;
         } else {
             return true;
@@ -235,7 +246,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
     // My math goal right now is to not do this by looping and guessing. 
     // There MUST be a better, more determined way.
     const getSlippingVectorFromSurfaceNormal = (surfaceNormal: Vector3) => {
-        let testVectors = [new Vector3(1, 0, 0), new Vector3(0, 0, 1), new Vector3(-1, 0, 0), new Vector3(0, 0, -1), new Vector3(0, 1, 0), new Vector3(0, -1, 0)];
+        let testVectors = [new Vector3(1, 0, 0), new Vector3(0, 0, 1), new Vector3(-1, 0, 0), new Vector3(0, 0, -1)];
         let slideVector = new Vector3(0, 0, 0);
         let yResults = [];
         let i = 0;
@@ -253,9 +264,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }, { index: -1, val: Infinity }).index;
 
         slideVector.crossVectors(surfaceNormal, testVectors[indexOfBestResult]);
-        console.log(yResults);
-        console.log(testVectors);
-        console.log(slideVector);
+
         return slideVector;
     };
 
@@ -350,26 +359,10 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
                     const differenceInDistanceFromFloor = oldDistaceFromFloor - newDistanceFromFloor;
                     movementVector.y = differenceInDistanceFromFloor;
                 }
-
-
-                if (groundedInNewPosition.slipping === true) {
-                    // Slippery.
-                    const closestSurface = groundedInNewPosition.solidSurfacesBelow[0];
-                    const face = closestSurface.face;
-                    if (!face) {
-                        console.log(groundedInNewPosition);
-                        const err = new Error("No face. Why?");
-                        throw err;
-                    }
-                    const surfaceNormal = face.normal.clone();
-                    surfaceNormal.applyQuaternion(closestSurface.object.quaternion);
-                    const slideVector = getSlippingVectorFromSurfaceNormal(surfaceNormal);
-                    camera.position.add(slideVector.multiplyScalar(3));
-                }
             }
 
             const maxSlopeableHeight = camera.position.clone();
-            maxSlopeableHeight.add(new Vector3(0, -0.5, 0));
+            maxSlopeableHeight.add(new Vector3(0, 0, 0));
             if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
                 camera.position.add(movementVector);
             } else {
@@ -378,9 +371,23 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             }
         }
 
+        if (initialGroundedCheck.slipping === true) {
+            // Slippery.
+            const closestSurface = initialGroundedCheck.solidSurfacesBelow[0];
+            const face = closestSurface.face;
+            if (!face) {
+                console.log(initialGroundedCheck);
+                const err = new Error("No face. Why?");
+                throw err;
+            }
+            const normal = convertLocalNormalToWorld(closestSurface.object, face.normal);
+            const slideVector = getSlippingVectorFromSurfaceNormal(normal);
+            camera.position.add(slideVector.multiplyScalar(3));
+        }
+
         applyCameraRotation(mouse, _euler);
 
-        // applyHeadBob(movementVector);
+        applyHeadBob(movementVector);
 
         checkCancelSprinting(movementVector);
         drawCrosshair(dt);
