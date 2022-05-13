@@ -5,15 +5,17 @@ import Keyboard, { MouseInterface } from "./inputHelper";
 const canvasElement = document.querySelector("#three-canvas");
 
 const SPEED = 0.7;
-const MAX_POLAR_ANGLE = MathUtils.degToRad(40);
+const MAX_POLAR_ANGLE = MathUtils.degToRad(70);
 const MIN_POLAR_ANGLE = -MAX_POLAR_ANGLE;
 const SOLID_LAYER = 7;
-
 const CAN_SPRINT_IN_AIR = true;
+const PLAYER_HEIGHT = 15;
 
 const _euler = new Euler(0, 0, 0, 'YXZ');
 const _vector = new Vector3(0, 0, 0);
+const _vectorB = new Vector3(0, 0, 0);
 
+// THIS SHOULD MOVE
 if (canvasElement === null) {
     throw new Error("Document needs #three-canvas.");
 }
@@ -21,11 +23,12 @@ canvasElement?.addEventListener("click", () => {
     canvasElement.requestPointerLock();
 });
 
-let collisionChain = false;
-
 const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
-    const startPos = { x: 0, z: 300, y: 1000 };
+    const keyboard = new Keyboard();
+    const mouse = new MouseInterface();
+
+    const startPos = { x: 0, z: 300, y: 10 };
     camera.position.set(startPos.x, startPos.y, startPos.z);
 
     const getSceneSolidObjects = (() => {
@@ -77,23 +80,9 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         copyToVector.addScaledVector(_vector, distance);
     };
 
-    const keyboard = new Keyboard();
-    const mouse = new MouseInterface();
-
-    const pointer = { velX: 0.0, velY: 0.0 };
-
-    document.addEventListener("mousemove", (e) => {
-        pointer.velX += e.movementX;
-        pointer.velY += e.movementY;
-    });
 
     let sprinting = false;
     let headBobDelta = 0;
-
-    const material = new LineBasicMaterial({
-        color: 0xaaffff
-    });
-    let lines: Line[] = [];
 
     // To be called in loop:
     const assignSprinting = (isGrounded: boolean) => {
@@ -161,7 +150,10 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         camera.lookAt(aheadOfCameraBeforeReposition);
     };
 
-    const drawCrosshair = (dt: number) => {
+
+    const material = new LineBasicMaterial();
+    let lines: Line[] = [];
+    const drawCrosshair = () => {
         const forward = getPointAheadOfCamera();
 
         const points = [];
@@ -197,7 +189,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         if (solidSurfacesBelow.length === 0) return { grounded: false, slipping: false, solidSurfacesBelow: [] };
 
-        if (solidSurfacesBelow[0].distance <= 15) {
+        if (solidSurfacesBelow[0].distance <= PLAYER_HEIGHT + 1) {
             const slipping = onSlipperySurface(solidSurfacesBelow);
             return { grounded: true, slipping, solidSurfacesBelow };
         } else {
@@ -311,6 +303,14 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         }
     };
 
+    const graduallyMaintainHeight = (distanceToGround: number) => {
+
+        if (distanceToGround < PLAYER_HEIGHT) {
+            camera.position.y += 0.1;
+        }
+
+    };
+
     return (dt: number) => {
 
         const movementVector = new Vector3(0, 0, 0);
@@ -345,7 +345,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
                     const oldDistaceFromFloor = initialGroundedCheck.solidSurfacesBelow[0].distance;
                     const newDistanceFromFloor = groundedInNewPosition.solidSurfacesBelow[0].distance;
                     const differenceInDistanceFromFloor = oldDistaceFromFloor - newDistanceFromFloor;
-                    movementVector.y = differenceInDistanceFromFloor;
+                    movementVector.y = differenceInDistanceFromFloor
                 }
             }
 
@@ -375,8 +375,13 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         applyHeadBob(movementVector);
 
+        const finalGrounded = checkIsGrounded(camera.position);
+        if (finalGrounded.grounded) {
+            graduallyMaintainHeight(finalGrounded.solidSurfacesBelow[0].distance);
+        }
+
         checkCancelSprinting(movementVector);
-        drawCrosshair(dt);
+        drawCrosshair();
 
     };
 
