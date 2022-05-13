@@ -61,18 +61,6 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
         const collision = rayResults.some(result => result.distance < Math.abs(distance + 3));
 
-        if (collision && collisionChain === false) {
-            collisionChain = true;
-        } else if (!collision && collisionChain) {
-            collisionChain = false;
-            console.warn("No collision");
-            console.groupCollapsed("Details");
-            console.log("Ray results:", rayResults);
-            console.log("Move", moveDirection);
-            console.log("Normal", dir);
-            console.groupEnd();
-        }
-
         return collision;
 
     };
@@ -220,7 +208,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
 
     const _normalMatrix = new Matrix3();
     const _worldNormal = new Vector3();
-    const convertLocalNormalToWorld = (objectContainingNormal: Object3D, localNormal: Vector3, ) => {
+    const convertLocalNormalToWorld = (objectContainingNormal: Object3D, localNormal: Vector3,) => {
         _normalMatrix.getNormalMatrix(objectContainingNormal.matrixWorld);
         _worldNormal.copy(localNormal).applyMatrix3(_normalMatrix).normalize();
         return _worldNormal.clone();
@@ -233,7 +221,7 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
         const surfaceNormal = closestSurface.face.normal.clone();
 
         const surfaceWorldNormal = convertLocalNormalToWorld(closestSurface.object, surfaceNormal);
-            
+
         const dotNormal = surfaceWorldNormal.dot(camera.up);
 
         if (Math.abs(dotNormal) > .9) {
@@ -366,7 +354,6 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
                 camera.position.add(movementVector);
             } else {
-                console.log("yes collision");
                 movementVector.multiply(ZERO_VEC3); // This is where the movement vector can be zero'd out.
             }
         }
@@ -376,7 +363,6 @@ const setupFPSCharacter = (camera: Camera, scene: Scene) => {
             const closestSurface = initialGroundedCheck.solidSurfacesBelow[0];
             const face = closestSurface.face;
             if (!face) {
-                console.log(initialGroundedCheck);
                 const err = new Error("No face. Why?");
                 throw err;
             }
