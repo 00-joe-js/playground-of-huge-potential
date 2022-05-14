@@ -118,7 +118,7 @@ export class GamepadInterface {
         this.listenForGamepadConnect();
     }
 
-    waitForGamepadConnect(timeout = 5000) {
+    waitForGamepadConnect(timeout = 2000) {
 
         return new Promise((resolve, reject) => {
             if (this.gamepad) {
@@ -138,7 +138,7 @@ export class GamepadInterface {
     }
 
     getState() {
-        const gamepad = navigator.getGamepads()[0];
+        const gamepad = navigator.getGamepads()[1];
 
 
         if (!gamepad) return null;
@@ -148,7 +148,7 @@ export class GamepadInterface {
         const xDown = buttonValues[3] === 1;
         const zRDown = buttonValues[7] === 1;
 
-        const moveScale = 1;
+        const moveScale = 1.5;
         const moveVel = new Vector2(gamepad.axes[0] * moveScale, gamepad.axes[1] * moveScale * -1);
 
         const lookScale = 40;
@@ -158,7 +158,7 @@ export class GamepadInterface {
 
     private listenForGamepadConnect() {
         window.addEventListener("gamepadconnected", (e) => {
-            this.gamepad = navigator.getGamepads()[0];
+            this.gamepad = navigator.getGamepads()[1];
         });
     }
 
