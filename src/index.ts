@@ -164,15 +164,16 @@ const configureTower = (towerGroup: Group) => {
                 }
                 varying vec3 vPos;
                 void main() {
-                    vec3 pos = position + vec3(0.0, noise(position.x + position.z / 2.0 + (uTime/3550.0)) * -20.0, 0.0);
+                    vec3 pos = position + vec3(0.0, noise((position.x / 200.0) + (position.z) + (uTime / 1500.0)) * -60.0, (sin(uTime) / 2000.0));
                     vPos = pos;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 );
                 }
                 `,
                 fragmentShader: `
+                uniform float uTime;
                 varying vec3 vPos;
                 void main() {
-                    vec3 color = vec3(0.0 - (vPos.y / 4.0), 0.0 - (vPos.y / 5.0), 0.0);
+                    vec3 color = vec3(0.0 + (abs(vPos.y) / 50.0), sin(vPos.z / 100.0 + (uTime / 200.0)), abs(sin(vPos.y)));
                     gl_FragColor = vec4(color, 1.0);
                 }
                 `
@@ -182,7 +183,7 @@ const configureTower = (towerGroup: Group) => {
                 u.uTime.value = dt;
             })
 
-            const groundG = new BoxGeometry(7000, 0, 7000, 20, 1, 300);
+            const groundG = new BoxGeometry(3000, 0, 3000, 70, 1, 70);
             const ground = new Mesh(groundG, groundMat);
             const rampG = new BoxGeometry(1000, 30, 30, 40, 40, 3);
             const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));

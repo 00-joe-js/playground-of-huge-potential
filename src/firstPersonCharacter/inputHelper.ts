@@ -138,8 +138,7 @@ export class GamepadInterface {
     }
 
     getState() {
-        const gamepad = navigator.getGamepads()[1];
-
+        const gamepad = navigator.getGamepads().find(c => !!c);
 
         if (!gamepad) return null;
 
@@ -158,7 +157,7 @@ export class GamepadInterface {
 
     private listenForGamepadConnect() {
         window.addEventListener("gamepadconnected", (e) => {
-            this.gamepad = navigator.getGamepads()[1];
+            this.gamepad = navigator.getGamepads().find(c => !!c) || null;
         });
     }
 

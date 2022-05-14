@@ -1,4 +1,4 @@
-import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D, Matrix3 } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D, Matrix3, Color } from "three";
 
 import Keyboard, { MouseInterface, GamepadInterface } from "./inputHelper";
 
@@ -167,15 +167,16 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
 
         const geometry = new BufferGeometry().setFromPoints(points);
         const newLine = new Line(geometry, material);
+
         if (sprinting) {
-            newLine.material.color = RED;
+            newLine.material.color = new Color(1, 1, 1);
         } else {
             newLine.material.color = HYPER_BLUE;
         }
         scene.add(newLine);
         lines.push(newLine);
 
-        if (lines.length > 5) {
+        if (lines.length > 7) {
             scene.remove(lines[0]);
             lines = lines.slice(1);
         }
