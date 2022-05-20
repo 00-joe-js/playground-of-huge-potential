@@ -2,11 +2,9 @@ import { WebGLRenderer } from "three/src/renderers/WebGLRenderer";
 
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
-import { GlitchPass } from "three/examples/jsm/postprocessing/GlitchPass";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass";
 import { PixelShader } from "three/examples/jsm/shaders/PixelShader";
-import { LuminosityShader } from 'three/examples/jsm/shaders/LuminosityShader.js';
 
 
 import { Scene, Camera, Vector2, Color, Vector3 } from "three";

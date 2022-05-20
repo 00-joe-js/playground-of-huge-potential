@@ -1,7 +1,7 @@
 import "./style.css";
 
-import { Scene, PerspectiveCamera, MeshLambertMaterial, AmbientLight, DirectionalLight, MeshPhongMaterial, BoxGeometry, Color, MathUtils, ShaderMaterial, Vector3, Euler, Group } from "three";
-import { SphereGeometry, MeshBasicMaterial, Mesh, UniformsUtils, ShaderLib, BufferAttribute, SphereBufferGeometry } from "three";
+import { Scene, PerspectiveCamera, AmbientLight, DirectionalLight, MeshPhongMaterial, BoxGeometry, Color, MathUtils, ShaderMaterial, Vector3, Euler, Group } from "three";
+import { Mesh, UniformsUtils, ShaderLib, BufferAttribute, SphereBufferGeometry } from "three";
 
 import customPhongVertex from "./shading/customPhongVertex";
 
@@ -22,6 +22,7 @@ window.ZERO_VEC3 = new Vector3(0, 0, 0);
 window.RED = new Color(0xff0000);
 window.BLUE = new Color(0x0000ff);
 window.HYPER_BLUE = new Color(0xaaffff);
+// ---
 
 import { renderLoop } from "./renderer";
 import setupFPSCharacter from "./firstPersonCharacter";
@@ -31,7 +32,6 @@ const RESOLUTION = 16 / 9;
 const scene = new Scene();
 const camera = new PerspectiveCamera(50, RESOLUTION, 1, 10000);
 camera.position.z = 20;
-
 
 // randos.
 const randomColor = () => {

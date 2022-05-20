@@ -5,7 +5,7 @@ import Keyboard, { MouseInterface, GamepadInterface } from "./inputHelper";
 const canvasElement = document.querySelector("#three-canvas");
 
 const SPEED = 0.7;
-const MAX_POLAR_ANGLE = MathUtils.degToRad(70);
+const MAX_POLAR_ANGLE = MathUtils.degToRad(85);
 const MIN_POLAR_ANGLE = -MAX_POLAR_ANGLE;
 const SOLID_LAYER = 7;
 const CAN_SPRINT_IN_AIR = true;
