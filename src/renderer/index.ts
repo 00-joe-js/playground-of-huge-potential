@@ -28,17 +28,17 @@ renderer.setClearColor(0x222200);
 export const renderLoop = (scene: Scene, camera: Camera, onLoop: (dt: number) => void) => {
 
     const screenRes = new Vector2(canvasElement.clientWidth, canvasElement.clientHeight);
+    const bloomPass = new UnrealBloomPass(screenRes, 5.0, -0.1, 0.9);
 
-    composer.addPass(new RenderPass(scene, camera));
-
-    const pixelPass = new ShaderPass(PixelShader);
-    pixelPass.uniforms.resolution.value = new Vector2(canvasElement.clientWidth, canvasElement.clientHeight);
-    pixelPass.uniforms.pixelSize.value = 2;
-    composer.addPass(pixelPass);
+    // const pixelPass = new ShaderPass(PixelShader);
+    // pixelPass.uniforms.resolution.value = new Vector2(canvasElement.clientWidth, canvasElement.clientHeight);
+    // pixelPass.uniforms.pixelSize.value = 2;
+    // composer.addPass(pixelPass);
     // pixelPass.renderToScreen = true;
 
-    const bloomPass = new UnrealBloomPass(screenRes, 10.0, 0, 0.7);
+    composer.addPass(new RenderPass(scene, camera));
     composer.addPass(bloomPass);
+
     bloomPass.renderToScreen = true;
 
     const internalLoop = (deltaTime: number) => {

@@ -1,4 +1,4 @@
-import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Ray, Intersection, Object3D, Matrix3, Color } from "three";
+import { Camera, Vector3, Euler, MathUtils, BufferGeometry, LineBasicMaterial, Line, Scene, Raycaster, Event, Layers, Intersection, Object3D, Matrix3, Color } from "three";
 
 import Keyboard, { MouseInterface, GamepadInterface } from "./inputHelper";
 
@@ -13,27 +13,22 @@ const PLAYER_HEIGHT = 15;
 
 const _euler = new Euler(0, 0, 0, 'YXZ');
 const _vector = new Vector3(0, 0, 0);
-const _vectorB = new Vector3(0, 0, 0);
 
 // THIS SHOULD MOVE
 if (canvasElement === null) {
     throw new Error("Document needs #three-canvas.");
 }
-canvasElement?.addEventListener("click", () => {
+canvasElement.addEventListener("click", () => {
     canvasElement.requestPointerLock();
 });
 
 const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
 
     const gamepad = new GamepadInterface();
-
     await gamepad.waitForGamepadConnect();
 
     const keyboard = new Keyboard();
     const mouse = new MouseInterface();
-
-    const startPos = { x: 0, z: 300, y: 10 };
-    camera.position.set(startPos.x, startPos.y, startPos.z);
 
     const getSceneSolidObjects = (() => {
         const testLayers = new Layers();
@@ -298,7 +293,7 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
             if (!isSlipping) {
                 let spaceDown = getSpacePress(jumpButtonDown);
                 if (spaceDown) {
-                    aerialVector.add(new Vector3(0, 0.4 * (sprinting ? 2 : 1), 0));
+                    aerialVector.add(new Vector3(0, 0.4 * (sprinting ? 3 : 1), 0));
                     fall(deltaTimeSinceSceneStart);
                 }
             }
@@ -316,17 +311,37 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
 
     };
 
+    let preventMovement = false;
+
+    // Function to run on game loop.
     return (dt: number) => {
 
         const gamepadState = gamepad.getState();
         const movementVector = new Vector3(0, 0, 0);
 
         const initialGroundedCheck = checkIsGrounded();
+        const isSlipping = initialGroundedCheck.slipping;
         const isGrounded = initialGroundedCheck.grounded;
         applyJumpAndGravity(isGrounded, initialGroundedCheck.slipping, dt, gamepadState ? gamepadState.xDown : keyboard.spaceDown);
         assignSprinting(isGrounded, gamepadState ? gamepadState.zRDown : keyboard.ctrlDown);
 
-        let speed = SPEED * (sprinting ? 3 : 1);
+        if (isSlipping) {
+            const closestSurface = initialGroundedCheck.solidSurfacesBelow[0];
+            const face = closestSurface.face;
+            if (!face) {
+                const err = new Error("No face. Why?");
+                throw err;
+            }
+            const normal = convertLocalNormalToWorld(closestSurface.object, face.normal);
+            const slideVector = getSlippingVectorFromSurfaceNormal(normal);
+            camera.position.add(slideVector.multiplyScalar(3));
+            preventMovement = true;
+            setTimeout(() => {
+                preventMovement = false;
+            }, 500);
+        }
+
+        let speed = SPEED * (sprinting && !isSlipping ? 5 : 1);
 
         if (gamepadState) {
             if (gamepadState.moveVel.y !== 0) {
@@ -355,7 +370,6 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
             const groundedInNewPosition = checkIsGrounded(camera.position.clone().add(movementVector));
 
             if (groundedInNewPosition.grounded === true) {
-
                 if (initialGroundedCheck.grounded === true) {
                     const oldDistaceFromFloor = initialGroundedCheck.solidSurfacesBelow[0].distance;
                     const newDistanceFromFloor = groundedInNewPosition.solidSurfacesBelow[0].distance;
@@ -366,29 +380,15 @@ const setupFPSCharacter = async (camera: Camera, scene: Scene) => {
 
             const maxSlopeableHeight = camera.position.clone();
             maxSlopeableHeight.add(new Vector3(0, 0, 0));
-            if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight)) {
+            if (!touchesASolid(movementVector, movementVector.length(), maxSlopeableHeight) && !preventMovement) {
                 camera.position.add(movementVector);
             } else {
                 movementVector.multiply(ZERO_VEC3); // This is where the movement vector can be zero'd out.
             }
         }
 
-        if (initialGroundedCheck.slipping === true) {
-            // Slippery.
-            const closestSurface = initialGroundedCheck.solidSurfacesBelow[0];
-            const face = closestSurface.face;
-            if (!face) {
-                const err = new Error("No face. Why?");
-                throw err;
-            }
-            const normal = convertLocalNormalToWorld(closestSurface.object, face.normal);
-            const slideVector = getSlippingVectorFromSurfaceNormal(normal);
-            camera.position.add(slideVector.multiplyScalar(3));
-        }
-
         if (gamepadState) {
             applyCameraRotation({ xVelocity: gamepadState.lookVel.x, yVelocity: gamepadState.lookVel.y }, _euler);
-
         } else {
             applyCameraRotation({ xVelocity: mouse.movement.x, yVelocity: mouse.movement.y }, _euler);
         }

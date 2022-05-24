@@ -29,9 +29,13 @@ import setupFPSCharacter from "./firstPersonCharacter";
 
 const RESOLUTION = 16 / 9;
 
+import Player from "./firstPersonCharacter/PlayerClass";
+
 const scene = new Scene();
 const camera = new PerspectiveCamera(50, RESOLUTION, 1, 10000);
-camera.position.z = 20;
+
+const player = new Player(camera);
+player.setWorldPosition(new Vector3(0, 0, 4700));
 
 // randos.
 const randomColor = () => {
@@ -183,7 +187,9 @@ const configureTower = (towerGroup: Group) => {
                 u.uTime.value = dt;
             })
 
-            const groundG = new BoxGeometry(3000, 0, 3000, 70, 1, 70);
+            const GROUND_SIZE = 10000;
+
+            const groundG = new BoxGeometry(GROUND_SIZE, 0, GROUND_SIZE, 70, 1, 70);
             const ground = new Mesh(groundG, groundMat);
             const rampG = new BoxGeometry(1000, 30, 30, 40, 40, 3);
             const ramp = new Mesh(rampG, new MeshPhongMaterial({ color: 0xaaaaaa }));
