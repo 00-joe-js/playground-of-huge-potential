@@ -3,13 +3,14 @@ const sweetBabyLoader = new GLTFLoader();
 
 import glitchTower from "../../assets/glitch-tower.glb";
 import towerRamps from "../../assets/glitch-tower-ramps.glb";
+import level from "../../assets/levelt.glb";
 
-const modelUrls = [glitchTower, towerRamps];
+const modelUrls = [glitchTower, towerRamps, level];
 
 const loadOneModel = (url: string) => {
     return new Promise<GLTF>((resolvePromise, rejectPromise) => {
-        sweetBabyLoader.load(url, (towerGlb) => {
-            resolvePromise(towerGlb);
+        sweetBabyLoader.load(url, (glb) => {
+            resolvePromise(glb);
         }, () => { }, (err) => {
             rejectPromise(err);
         });
