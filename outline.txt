@@ -37,6 +37,7 @@ Boilerplate
     - Using custom object translation
     - Supplied camera controls from Three.js ecosystem
 
+...
 
 - Next steps:
 

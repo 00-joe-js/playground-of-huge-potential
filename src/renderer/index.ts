@@ -20,12 +20,12 @@ const composer = new EffectComposer(renderer);
 
 renderer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
 composer.setSize(canvasElement.clientWidth, canvasElement.clientHeight);
-renderer.setClearColor(0x777777);
+renderer.setClearColor(0xbbbbff);
 
 export const renderLoop = (scene: Scene, camera: Camera, onLoop: (dt: number) => void) => {
 
     const screenRes = new Vector2(canvasElement.clientWidth, canvasElement.clientHeight);
-    const bloomPass = new UnrealBloomPass(screenRes, 0.0, -0.1, 0.5);
+    const bloomPass = new UnrealBloomPass(screenRes, 0.0, -0.1, 0.2);
 
     composer.addPass(new RenderPass(scene, camera));
     composer.addPass(bloomPass);
