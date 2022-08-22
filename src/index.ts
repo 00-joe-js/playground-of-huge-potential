@@ -1,10 +1,16 @@
 import "./style.css";
 
-import { Scene, PerspectiveCamera, AmbientLight, BoxGeometry, MeshBasicMaterial, Mesh, Side, FrontSide, SphereGeometry, Vector3, Color, CylinderGeometry, OctahedronGeometry, MeshLambertMaterial, PointLight, MeshPhongMaterial, PointLightHelper } from "three";
+import { Scene, PerspectiveCamera, AmbientLight, BoxGeometry, MeshBasicMaterial, Mesh, Side, FrontSide, SphereGeometry, Vector3, Color, CylinderGeometry, OctahedronGeometry, MeshLambertMaterial, PointLight, MeshPhongMaterial, PointLightHelper, RepeatWrapping, Raycaster, Vector2 } from "three";
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 import renderer, { renderLoop } from "./renderer";
+
+import { TextureLoader } from "three";
+import grassUrl from "../assets/grass.jpg";
+
+import loadAllModels from "./importHelpers/gltfLoader";
+
 
 const RESOLUTION = 16 / 9;
 
@@ -21,13 +27,19 @@ let loopHooks: Array<(dt: number) => void> = [];
 
     let sceneMade = false;
 
+    const [shovelGltf] = await loadAllModels();
+    const grassTexture = new TextureLoader().load(grassUrl);
+
     const initializeScene = (scene: Scene, camera: PerspectiveCamera, dt: number) => {
         sceneMade = true;
 
         // Ground
         const GROUND_SIZE = 1000;
         const groundGeometry = new BoxGeometry(GROUND_SIZE, 1, GROUND_SIZE, 70, 1, 70);
-        const groundMesh = new Mesh(groundGeometry, new MeshLambertMaterial({ color: 0x227700 }));
+        const groundMesh = new Mesh(groundGeometry, new MeshLambertMaterial({ map: grassTexture }));
+        grassTexture.repeat.set(4, 4);
+        grassTexture.wrapS = RepeatWrapping;
+        grassTexture.wrapT = RepeatWrapping;
         scene.add(groundMesh);
 
         // Red Ball
@@ -74,13 +86,16 @@ let loopHooks: Array<(dt: number) => void> = [];
         prism.scale.multiplyScalar(4);
         prism.position.y += 80;
 
-        loopHooks.push(dt => {
-            prism.rotation.y += 0.05;
-        });
-
-        loopHooks.push(dt => {
-            controls.update();
-        });
+        // Shovel
+        const shovelMesh = shovelGltf.scene;
+        scene.add(shovelMesh);
+        shovelMesh.position.copy(sandBoxSand.position);
+        shovelMesh.scale.multiplyScalar(5);
+        shovelMesh.position.y += 35;
+        shovelMesh.position.x += 100;
+        shovelMesh.rotateX(-Math.PI / 2 - 0.5);
+        shovelMesh.castShadow = true;
+        shovelMesh.receiveShadow = true;
 
         const faerie = new PointLight(0xaaaaaa, 2.0, 1000);
         const helper = new PointLightHelper(faerie, 1);
@@ -92,6 +107,31 @@ let loopHooks: Array<(dt: number) => void> = [];
             faerie.position.z = 300 * (Math.sin(dt / 500));
             faerie.position.x = 400 * (Math.sin(dt / 700));
         });
+
+        loopHooks.push(dt => {
+            prism.rotation.y += 0.05;
+        });
+
+        loopHooks.push(dt => {
+            controls.update();
+        });
+
+        const mousePosition = new Vector2();
+        window.addEventListener("pointermove", (e) => {
+            mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mousePosition.y = - (e.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        const rayCaster = new Raycaster();
+        loopHooks.push(dt => {
+            rayCaster.setFromCamera(mousePosition, camera);
+            const mouseOverBucket = rayCaster.intersectObject(bucket);
+            console.log(mouseOverBucket);
+            if (mouseOverBucket[0]) {
+                bucket.rotateZ(1);
+            }
+        });
+
 
     };
 
